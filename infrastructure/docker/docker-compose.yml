@@ -1,0 +1,25 @@
+services:
+  upload-manager:
+    build: { context: ../.., dockerfile: apps/upload-manager/Dockerfile }
+    network_mode: host
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY:?ENCRYPTION_MASTER_KEY is required}
+      INITIAL_SETUP_TOKEN: ${INITIAL_SETUP_TOKEN:?INITIAL_SETUP_TOKEN is required}
+    volumes: ["/media:/media:ro","telethon:/root/.config/telegram-media-cloud"]
+  telegram-gateway:
+    build: { context: ../.., dockerfile: apps/telegram-gateway/Dockerfile }
+    network_mode: host
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
+      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY:?ENCRYPTION_MASTER_KEY is required}
+      INITIAL_SETUP_TOKEN: ${INITIAL_SETUP_TOKEN:?INITIAL_SETUP_TOKEN is required}
+    volumes: ["telethon:/root/.config/telegram-media-cloud"]
+  prometheus:
+    image: prom/prometheus
+    volumes: ["../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["127.0.0.1:9090:9090"]
+  grafana:
+    image: grafana/grafana
+    ports: ["127.0.0.1:3000:3000"]
+volumes: { telethon: {} }
