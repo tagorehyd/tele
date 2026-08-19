@@ -1,0 +1,13 @@
+name = "telegram-media-cloud-worker"
+main = "src/index.ts"
+compatibility_date = "2026-08-19"
+[[d1_databases]]
+binding = "DB"
+database_name = "telegram-media-cloud"
+database_id = "configure-with-wrangler"
+[[r2_buckets]]
+binding = "CACHE"
+bucket_name = "telegram-media-cloud-cache"
+[[kv_namespaces]]
+binding = "KV"
+id = "configure-with-wrangler"

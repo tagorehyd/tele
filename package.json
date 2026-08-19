@@ -1,0 +1,1 @@
+{"name":"telegram-media-cloud","private":true,"workspaces":["apps/*","packages/*"],"scripts":{"test":"npm -ws test","build":"npm -ws build","lint":"npm -ws lint"},"devDependencies":{"typescript":"^5.5.4","vitest":"^2.0.5"}}

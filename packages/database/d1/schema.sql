@@ -1,0 +1,17 @@
+PRAGMA foreign_keys=ON;
+CREATE TABLE IF NOT EXISTS users(id INTEGER PRIMARY KEY AUTOINCREMENT,email TEXT UNIQUE NOT NULL,password_hash TEXT NOT NULL,role TEXT NOT NULL CHECK(role in ('Admin','Viewer')),disabled INTEGER NOT NULL DEFAULT 0,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS media(id TEXT PRIMARY KEY,media_type TEXT NOT NULL,title TEXT NOT NULL,original_title TEXT,sort_title TEXT,year INTEGER,imdb_id TEXT,tmdb_id TEXT,filename TEXT NOT NULL,size_bytes INTEGER NOT NULL,sha256 TEXT NOT NULL,resolution TEXT,video_codec TEXT,audio_codec TEXT,subtitle_languages TEXT,runtime_minutes INTEGER,plot TEXT,poster_url TEXT,backdrop_url TEXT,mime_type TEXT,popularity INTEGER NOT NULL DEFAULT 0,archived_at TEXT);
+CREATE VIRTUAL TABLE IF NOT EXISTS media_fts USING fts5(title,original_title,imdb_id,tmdb_id,plot,content='media',content_rowid='rowid');
+CREATE TABLE IF NOT EXISTS genres(id INTEGER PRIMARY KEY,name TEXT UNIQUE NOT NULL); CREATE TABLE IF NOT EXISTS actors(id INTEGER PRIMARY KEY,name TEXT UNIQUE NOT NULL); CREATE TABLE IF NOT EXISTS studios(id INTEGER PRIMARY KEY,name TEXT UNIQUE NOT NULL);
+CREATE TABLE IF NOT EXISTS media_genres(media_id TEXT REFERENCES media(id) ON DELETE CASCADE,genre_id INTEGER REFERENCES genres(id),PRIMARY KEY(media_id,genre_id));
+CREATE TABLE IF NOT EXISTS media_actors(media_id TEXT REFERENCES media(id) ON DELETE CASCADE,actor_id INTEGER REFERENCES actors(id),PRIMARY KEY(media_id,actor_id));
+CREATE TABLE IF NOT EXISTS media_studios(media_id TEXT REFERENCES media(id) ON DELETE CASCADE,studio_id INTEGER REFERENCES studios(id),PRIMARY KEY(media_id,studio_id));
+CREATE TABLE IF NOT EXISTS channels(id INTEGER PRIMARY KEY,name TEXT UNIQUE NOT NULL,kind TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS chunks(id INTEGER PRIMARY KEY,media_id TEXT REFERENCES media(id),part_number INTEGER NOT NULL,channel_id INTEGER REFERENCES channels(id),message_id INTEGER NOT NULL,size_bytes INTEGER NOT NULL,sha256 TEXT NOT NULL,UNIQUE(media_id,part_number));
+CREATE TABLE IF NOT EXISTS manifests(media_id TEXT PRIMARY KEY REFERENCES media(id),channel_id INTEGER REFERENCES channels(id),message_id INTEGER NOT NULL,sha256 TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS upload_jobs(id TEXT PRIMARY KEY,media_id TEXT,status TEXT,queued_at TEXT DEFAULT CURRENT_TIMESTAMP,started_at TEXT,finished_at TEXT,error TEXT);
+CREATE TABLE IF NOT EXISTS audit_logs(id INTEGER PRIMARY KEY AUTOINCREMENT,user_id INTEGER,action TEXT NOT NULL,resource TEXT,ip TEXT,user_agent TEXT,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY,value TEXT NOT NULL,encrypted INTEGER NOT NULL DEFAULT 0,updated_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE TABLE IF NOT EXISTS cache_objects(object_key TEXT PRIMARY KEY,media_id TEXT,size_bytes INTEGER NOT NULL,hits INTEGER NOT NULL DEFAULT 0,last_accessed_at TEXT DEFAULT CURRENT_TIMESTAMP,created_at TEXT DEFAULT CURRENT_TIMESTAMP);
+CREATE VIEW IF NOT EXISTS cache_stats AS SELECT count(*) objects, coalesce(sum(size_bytes),0) bytes, coalesce(sum(hits),0) hits FROM cache_objects;
+CREATE INDEX IF NOT EXISTS idx_media_title ON media(title); CREATE INDEX IF NOT EXISTS idx_media_year ON media(year); CREATE INDEX IF NOT EXISTS idx_chunks_media ON chunks(media_id,part_number);

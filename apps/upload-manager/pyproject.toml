@@ -1,0 +1,7 @@
+[project]
+name="telegram-media-cloud-upload-manager"
+version="1.0.0"
+requires-python=">=3.12"
+dependencies=["fastapi","uvicorn[standard]","sqlalchemy[asyncio]","asyncpg","alembic","redis","telethon","httpx","pydantic-settings","cryptography","prometheus-client","python-json-logger"]
+[tool.pytest.ini_options]
+asyncio_mode="auto"
