@@ -18,3 +18,8 @@ def test_upload_quota_applies_only_to_upload_bytes():
     p = UploadPolicy('UTC', [0], [('00:00', '23:59')], 100)
     assert p.quota_allows(90, 10)
     assert not p.quota_allows(90, 11)
+
+def test_disabled_scheduling_and_quotas_are_runtime_settings():
+    p = UploadPolicy('UTC', [], [], 1, scheduling_enabled=False, quotas_enabled=False)
+    assert p.is_open(datetime(2026, 8, 22, 2, 0, tzinfo=ZoneInfo('UTC')))
+    assert p.quota_allows(999, 999)

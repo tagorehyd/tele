@@ -1,5 +1,7 @@
 # Operations runbook
 
-Daily: review Grafana cache hit ratio, upload queue depth, Telegram gateway health, and recent audit errors. Weekly: run restore drills for manifests and D1 exports. Monthly: verify upload quota reset and rotate Cloudflare/API credentials where policy requires.
+Use the Health Dashboard for Telegram status, Telethon session status, Jellyfin status, TMDB status, Cloudflare Worker status, D1 status, KV status, R2 status, Upload Manager status, Gateway status, last check time, latency, and errors.
 
-Cache cleanup: Worker records cache objects in D1. Evict least-recently-used objects when configured bytes exceed the `cache.max_bytes` setting, default 6 GiB. Upload quota applies only to upload jobs; playback, downloads, browsing, and search are never quota-limited.
+Settings changes must be made in the web UI. Secret changes are encrypted, masked in normal responses, and written to audit logs. Rotate the encryption master key by re-encrypting `secret_store` values with the new key version during a maintenance window.
+
+Upload quota applies only to Upload Manager jobs. Playback, downloads, search, and browsing remain unthrottled by monthly upload quotas.
