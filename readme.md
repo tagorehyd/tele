@@ -13,30 +13,24 @@ Telegram Media Cloud is a self-hosted archival and streaming platform for storin
 
 ## Configuration-first rule
 
-The application is operable without editing code and without long-lived configuration files. Only these bootstrap environment variables are permitted:
+The application is operable without editing code. Docker Compose automatically provisions a private PostgreSQL container, generates the three bootstrap values, and stores them in the `tele-config` Docker volume as `config.json`:
 
 - `DATABASE_URL`
 - `ENCRYPTION_MASTER_KEY`
 - `INITIAL_SETUP_TOKEN`
 
-All Telegram, Jellyfin, TMDB, Cloudflare, JWT, upload, cache, channel mapping, and health settings are stored in database tables and managed from the web UI after initial setup. See `docs/bootstrap.md`.
+Existing deployments may still provide these values as environment variables; environment variables override `config.json`. All Telegram, Jellyfin, TMDB, Cloudflare, JWT, upload, cache, channel mapping, and health settings are stored in database tables and managed from the web UI after initial setup. See `docs/bootstrap.md`.
 
 ## Fresh Ubuntu 24.04 installation with Docker already installed
 
-1. Provision PostgreSQL and create an empty application database.
-2. Generate the encryption key: `python - <<'PY'
-from packages.auth.src.crypto import SecretBox
-print(SecretBox.generate_key())
-PY`.
-3. Generate a one-time setup token with your password manager or `openssl rand -base64 48`.
-4. Export only the three bootstrap variables in the shell or systemd secret manager: `DATABASE_URL`, `ENCRYPTION_MASTER_KEY`, and `INITIAL_SETUP_TOKEN`.
-5. Run migrations: `psql "$DATABASE_URL" -f packages/database/d1/schema.sql` for SQLite-compatible Cloudflare D1 schema review, and apply PostgreSQL migrations through the deployment pipeline when targeting PostgreSQL.
-6. Start private services: `docker compose -f infrastructure/docker/docker-compose.yml up -d --build`.
-7. Deploy the Worker and Pages project with Cloudflare bindings for D1, KV, and R2. No application secrets are stored in Worker source.
-8. Open the Cloudflare Pages URL. If `system.setup_completed` is absent or false, the UI redirects to the Setup Wizard.
-9. Enter the setup token and complete all wizard sections: Admin User, Telegram, Jellyfin, TMDB, Cloudflare, Upload Rules, Cache Rules, and Security Settings.
-10. Submit validation. The backend encrypts secrets, writes settings, audits changes, writes `system.setup_completed=true`, and switches the application into normal mode.
-11. Use the Health Dashboard to verify Telegram, Telethon session, Jellyfin, TMDB, Worker, D1, KV, R2, Upload Manager, and Gateway status.
+1. Start private services and the bundled PostgreSQL database: `docker compose -f infrastructure/docker/docker-compose.yml up -d --build`.
+2. Read the generated first-run values if needed: `docker compose -f infrastructure/docker/docker-compose.yml run --rm config-init` and inspect the `tele-config` Docker volume on the host.
+3. Apply PostgreSQL migrations through the deployment pipeline using the generated `DATABASE_URL`; the D1 schema remains available for Cloudflare D1 with `packages/database/d1/schema.sql`.
+4. Deploy the Worker and Pages project with Cloudflare bindings for D1, KV, and R2. No application secrets are stored in Worker source.
+5. Open the Cloudflare Pages URL. If `system.setup_completed` is absent or false, the UI redirects to the Setup Wizard.
+6. Enter the setup token and complete all wizard sections: Admin User, Telegram, Jellyfin, TMDB, Cloudflare, Upload Rules, Cache Rules, and Security Settings.
+7. Submit validation. The backend encrypts secrets, writes settings, audits changes, writes `system.setup_completed=true`, and switches the application into normal mode.
+8. Use the Health Dashboard to verify Telegram, Telethon session, Jellyfin, TMDB, Worker, D1, KV, R2, Upload Manager, and Gateway status.
 
 ## Settings managed in UI
 

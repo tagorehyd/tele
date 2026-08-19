@@ -1,20 +1,52 @@
 services:
+  config-init:
+    image: python:3.12-alpine
+    environment:
+      POSTGRES_USER: tmc
+      POSTGRES_DB: telegram_media_cloud
+      POSTGRES_HOST: 127.0.0.1
+      POSTGRES_PORT: 5432
+    volumes:
+      - tele-config:/config
+      - ./generate_config.py:/scripts/generate_config.py:ro
+    command: ["python", "/scripts/generate_config.py"]
+    restart: "no"
+  postgres:
+    image: postgres:16-alpine
+    depends_on:
+      config-init:
+        condition: service_completed_successfully
+    environment:
+      POSTGRES_USER: tmc
+      POSTGRES_DB: telegram_media_cloud
+      POSTGRES_PASSWORD_FILE: /run/tele-config/postgres_password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - tele-config:/run/tele-config:ro
+    ports: ["127.0.0.1:5432:5432"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tmc -d telegram_media_cloud"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
   upload-manager:
     build: { context: ../.., dockerfile: apps/upload-manager/Dockerfile }
     network_mode: host
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY:?ENCRYPTION_MASTER_KEY is required}
-      INITIAL_SETUP_TOKEN: ${INITIAL_SETUP_TOKEN:?INITIAL_SETUP_TOKEN is required}
-    volumes: ["/media:/media:ro","telethon:/root/.config/telegram-media-cloud"]
+      CONFIG_FILE: /run/tele-config/config.json
+    volumes: ["/media:/media:ro","telethon:/root/.config/telegram-media-cloud","tele-config:/run/tele-config:ro"]
   telegram-gateway:
     build: { context: ../.., dockerfile: apps/telegram-gateway/Dockerfile }
     network_mode: host
+    depends_on:
+      postgres:
+        condition: service_healthy
     environment:
-      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required}
-      ENCRYPTION_MASTER_KEY: ${ENCRYPTION_MASTER_KEY:?ENCRYPTION_MASTER_KEY is required}
-      INITIAL_SETUP_TOKEN: ${INITIAL_SETUP_TOKEN:?INITIAL_SETUP_TOKEN is required}
-    volumes: ["telethon:/root/.config/telegram-media-cloud"]
+      CONFIG_FILE: /run/tele-config/config.json
+    volumes: ["telethon:/root/.config/telegram-media-cloud","tele-config:/run/tele-config:ro"]
   prometheus:
     image: prom/prometheus
     volumes: ["../monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
@@ -22,4 +54,4 @@ services:
   grafana:
     image: grafana/grafana
     ports: ["127.0.0.1:3000:3000"]
-volumes: { telethon: {} }
+volumes: { telethon: {}, tele-config: {}, postgres-data: {} }
