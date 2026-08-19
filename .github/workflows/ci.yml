@@ -9,6 +9,7 @@ jobs:
         with: { node-version: '20' }
       - uses: actions/setup-python@v5
         with: { python-version: '3.12' }
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - run: npm run build --workspaces --if-present
       - run: python -m compileall apps packages
+      - run: python -m pytest tests/unit
