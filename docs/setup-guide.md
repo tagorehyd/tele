@@ -21,7 +21,7 @@ Firewall policy for `i5serv` must block direct public user access to Upload Mana
 
 ## 2. Bootstrap inputs
 
-Only three environment variables are used to start private services:
+Docker Compose automatically generates these values in `config.json` inside the `tele-config` Docker volume:
 
 - `DATABASE_URL`: PostgreSQL connection URL for the private application database.
 - `ENCRYPTION_MASTER_KEY`: base64-encoded 32-byte AES-256-GCM master key.
@@ -29,49 +29,13 @@ Only three environment variables are used to start private services:
 
 Do not create environment files for Telegram, Jellyfin, TMDB, Cloudflare, JWT, Worker, Redis, cache, or channel values. Those settings are entered in the web UI and stored in database tables.
 
-## 3. Prepare PostgreSQL
+## 3. Prepare PostgreSQL and bootstrap secrets
 
-Create a private PostgreSQL database reachable from `i5serv` only.
+The compose stack includes PostgreSQL and a one-shot `config-init` service. On first startup, `config-init` generates a PostgreSQL password, `DATABASE_URL`, `ENCRYPTION_MASTER_KEY`, and `INITIAL_SETUP_TOKEN`, writes them to `/config/config.json` in the `tele-config` volume, and writes the PostgreSQL password to `/config/postgres_password` for the official PostgreSQL image.
 
-```bash
-sudo -u postgres createuser --pwprompt tmc
-sudo -u postgres createdb --owner=tmc telegram_media_cloud
-```
+The generated database listens only on `127.0.0.1:5432` on the host. Existing deployments can still override the generated settings with environment variables of the same names. Record the setup token in your password manager until setup is complete.
 
-Build the bootstrap URL in your shell or host secret manager:
-
-```bash
-export DATABASE_URL='postgresql+asyncpg://tmc:REDACTED_PASSWORD@127.0.0.1:5432/telegram_media_cloud'
-```
-
-Keep this value outside the repository. If you use a containerized PostgreSQL instance, bind it to a private interface and use the same `DATABASE_URL` pattern.
-
-## 4. Generate bootstrap secrets
-
-Generate the encryption master key with the repository utility:
-
-```bash
-python - <<'PY'
-from packages.auth.src.crypto import SecretBox
-print(SecretBox.generate_key())
-PY
-```
-
-Export it through your host secret manager or current shell:
-
-```bash
-export ENCRYPTION_MASTER_KEY='REDACTED_BASE64_32_BYTE_KEY'
-```
-
-Generate a one-time setup token:
-
-```bash
-export INITIAL_SETUP_TOKEN="$(openssl rand -base64 48)"
-```
-
-Record the setup token in your password manager until setup is complete. Rotate or remove it from service runtime after `system.setup_completed=true` has been written and audited.
-
-## 5. Apply database schema
+## 4. Apply database schema
 
 Apply the application schema to the private database using the migration process used by your deployment pipeline. The repository contains D1-compatible schema and configuration migrations under `packages/database/d1/`; keep the private PostgreSQL schema aligned with these structures.
 
@@ -84,7 +48,7 @@ wrangler d1 execute telegram-media-cloud --remote --file packages/database/d1/sc
 
 The schema includes users, roles, media records, metadata relations, channels, chunks, manifests, upload jobs, audit logs, settings, secret store, upload/cache rules, component configuration tables, and health checks.
 
-## 6. Start private services on i5serv
+## 5. Start private services on i5serv
 
 From the repository root, start the Upload Manager, Telegram Gateway, Prometheus, and Grafana containers:
 
@@ -99,9 +63,9 @@ curl -fsS http://127.0.0.1:8081/healthz
 curl -fsS http://127.0.0.1:8082/healthz
 ```
 
-The compose file passes only the three bootstrap variables into private services and mounts `/media` read-only for Jellyfin library scanning.
+The compose file mounts the generated `config.json` read-only into private services and mounts `/media` read-only for Jellyfin library scanning.
 
-## 7. Create Cloudflare resources
+## 6. Create Cloudflare resources
 
 Authenticate Wrangler from your workstation or deployment runner:
 
