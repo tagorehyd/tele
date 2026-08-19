@@ -1,0 +1,6 @@
+name = "telegram-media-cloud-worker"
+main = "src/index.ts"
+compatibility_date = "2026-08-19"
+
+# Resource identifiers are bound during deployment by Wrangler/Cloudflare project configuration.
+# Application settings and secrets are stored in database tables after first-run setup.
