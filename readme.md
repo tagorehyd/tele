@@ -21,11 +21,6 @@ The application is operable without editing code and without long-lived configur
 
 All Telegram, Jellyfin, TMDB, Cloudflare, JWT, upload, cache, channel mapping, and health settings are stored in database tables and managed from the web UI after initial setup. See `docs/bootstrap.md`.
 
-
-## Complete setup guide
-
-Follow `docs/setup-guide.md` for the end-to-end procedure to configure PostgreSQL, bootstrap the three allowed variables, start private services, create Cloudflare resources, complete the first-run Setup Wizard, validate health, run scans, test playback/downloads, enable monitoring, and operate backups.
-
 ## Fresh Ubuntu 24.04 installation with Docker already installed
 
 1. Provision PostgreSQL and create an empty application database.
